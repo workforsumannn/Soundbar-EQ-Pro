@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0a14">
+<title>DJ Mixer Pro</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent; }
+  html, body {
+    height:100%;
+    overflow:hidden;
+    overscroll-behavior:none;
+    touch-action:manipulation;
+    position:fixed;
+    width:100%;
+  }
+  body {
+    font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: radial-gradient(circle at 50% 0%, #1a1a2e, #0a0a14);
+    color:#eee;
+    display:flex;
+    flex-direction:column;
+    padding:6px;
+    padding-top: calc(6px + env(safe-area-inset-top));
+    padding-bottom: calc(6px + env(safe-area-inset-bottom));
+    padding-left: calc(6px + env(safe-area-inset-left));
+    padding-right: calc(6px + env(safe-area-inset-right));
+  }
+
+  .header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:4px 8px;
+    margin-bottom:4px;
+    flex-shrink:0;
+  }
+  .header h1 {
+    font-size:13px;
+    letter-spacing:2px;
+    color:#00e5ff;
+    text-shadow:0 0 10px #00e5ff;
+  }
+  .header .status {
+    font-size:9px;
+    color:#00ff88;
+    letter-spacing:1px;
+    padding:2px 8px;
+    border-radius:10px;
+    background:rgba(0,255,136,0.1);
+  }
+  .header .status.off { color:#ff4444; background:rgba(255,68,68,0.1); }
+
+  .console {
+    flex:1;
+    display:grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap:6px;
+    background:linear-gradient(180deg,#1c1c2b,#111119);
+    padding:8px;
+    border-radius:14px;
+    border:1px solid #2a2a3d;
+    box-shadow:0 0 30px rgba(0,229,255,0.15), inset 0 0 20px rgba(0,0,0,0.8);
+    overflow:hidden;
+    min-height:0;
+  }
+
+  .deck {
+    background:linear-gradient(180deg,#242435,#16161f);
+    border-radius:12px;
+    padding:6px;
+    border:1px solid #33334a;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,0.6);
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-height:0;
+    overflow:hidden;
+  }
+  .deck h2 {
+    text-align:center;
+    font-size:10px;
+    letter-spacing:2px;
+    color:#ff4d8d;
+    text-shadow:0 0 6px #ff4d8d;
+    flex-shrink:0;
+  }
+  .deck.right h2 { color:#00e5ff; text-shadow:0 0 6px #00e5ff; }
+
+  .file-btn {
+    display:block;
+    background:linear-gradient(180deg,#2a2a3d,#1a1a26);
+    border:1px dashed #555;
+    color:#aaa;
+    padding:8px 6px;
+    border-radius:6px;
+    font-size:10px;
+    text-align:center;
+    font-weight:bold;
+    flex-shrink:0;
+    cursor:pointer;
+    transition:all 0.2s;
+  }
+  .file-btn:active { transform:scale(0.98); }
+  .file-btn.loaded { border-color:#00ff88; color:#00ff88; border-style:solid; }
+  input[type=file] { display:none; }
+
+  .platter {
+    width:80px; height:80px;
+    margin:0 auto;
+    border-radius:50%;
+    background:
+      radial-gradient(circle, #111 30%, #222 31%, #111 32%, #222 33%, #111 34%, #1a1a1a 100%);
+    border:3px solid #333;
+    position:relative;
+    box-shadow:0 0 15px rgba(0,0,0,0.8), inset 0 0 15px #000;
+    flex-shrink:0;
+  }
+  .platter::after {
+    content:'';
+    position:absolute;
+    top:50%; left:50%;
+    width:18px; height:18px;
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+    background:radial-gradient(circle,#00e5ff,#0088aa);
+    box-shadow:0 0 10px #00e5ff;
+  }
+  .platter .marker {
+    position:absolute;
+    top:4px; left:50%;
+    width:2px; height:8px;
+    background:#ff4d8d;
+    transform:translateX(-50%);
+    border-radius:2px;
+    box-shadow:0 0 6px #ff4d8d;
+  }
+  .deck.right .platter .marker { background:#00e5ff; box-shadow:0 0 6px #00e5ff; }
+
+  .btn-row {
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:4px;
+    flex-shrink:0;
+  }
+  .btn {
+    background:linear-gradient(180deg,#3a3a52,#22222f);
+    border:1px solid #44445c;
+    color:#ccc;
+    padding:10px 2px;
+    border-radius:8px;
+    font-size:10px;
+    font-weight:bold;
+    letter-spacing:0.5px;
+    cursor:pointer;
+    box-shadow:0 2px 0 #000;
+    min-height:36px;
+    touch-action:manipulation;
+    transition:all 0.1s;
+  }
+  .btn:active { transform:translateY(2px); box-shadow:none; }
+  .btn.active {
+    background:linear-gradient(180deg,#00e5ff,#0088aa);
+    color:#000;
+    box-shadow:0 0 12px #00e5ff;
+  }
+  .deck.right .btn.active {
+    background:linear-gradient(180deg,#ff4d8d,#aa2d5d);
+    box-shadow:0 0 12px #ff4d8d;
+  }
+
+  .knobs {
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:4px;
+    flex-shrink:0;
+  }
+  .knob-wrap { text-align:center; }
+  .knob {
+    width:100%;
+    max-width:42px;
+    aspect-ratio:1;
+    margin:0 auto;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #555, #1a1a1a);
+    border:2px solid #0a0a0a;
+    position:relative;
+    box-shadow:0 3px 6px rgba(0,0,0,0.8), inset 0 2px 4px rgba(255,255,255,0.1);
+    touch-action:none;
+  }
+  .knob .indicator {
+    position:absolute;
+    top:3px; left:50%;
+    width:2px; height:12px;
+    background:#00e5ff;
+    transform:translateX(-50%);
+    border-radius:2px;
+    box-shadow:0 0 6px #00e5ff;
+    transform-origin:50% 15px;
+  }
+  .deck.right .knob .indicator { background:#ff4d8d; box-shadow:0 0 6px #ff4d8d; }
+  .knob-wrap label {
+    display:block;
+    font-size:8px;
+    margin-top:3px;
+    color:#888;
+    letter-spacing:0.5px;
+  }
+
+  .fader-wrap {
+    text-align:center;
+    flex-shrink:0;
+    margin-top:auto;
+  }
+  .fader {
+    width:100%;
+    height:44px;
+    background:linear-gradient(180deg,#0a0a0a,#1a1a1a);
+    border-radius:22px;
+    margin:0 auto;
+    position:relative;
+    border:1px solid #2a2a2a;
+    box-shadow:inset 0 0 8px #000;
+    touch-action:none;
+  }
+  .fader .track {
+    position:absolute;
+    top:50%; left:8px; right:8px;
+    height:3px;
+    background:#000;
+    transform:translateY(-50%);
+    border-radius:2px;
+  }
+  .fader .cap {
+    position:absolute;
+    top:50%;
+    width:22px; height:36px;
+    background:linear-gradient(180deg,#555,#222);
+    border:1px solid #000;
+    border-radius:5px;
+    transform:translate(-50%,-50%);
+    box-shadow:0 2px 5px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.2);
+    left:80%;
+    pointer-events:none;
+  }
+  .fader .cap::after {
+    content:'';
+    position:absolute;
+    left:15%; right:15%; top:50%;
+    height:2px;
+    background:#00e5ff;
+    transform:translateY(-50%);
+    box-shadow:0 0 5px #00e5ff;
+  }
+  .deck.right .fader .cap::after { background:#ff4d8d; box-shadow:0 0 5px #ff4d8d; }
+  .fader-wrap label {
+    display:block;
+    font-size:8px;
+    margin-top:2px;
+    color:#888;
+    letter-spacing:0.5px;
+  }
+
+  .center {
+    width:64px;
+    background:linear-gradient(180deg,#242435,#16161f);
+    border-radius:12px;
+    padding:6px 4px;
+    border:1px solid #33334a;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,0.6);
+    min-height:0;
+  }
+  .center h2 {
+    font-size:9px;
+    letter-spacing:1px;
+    color:#ffd700;
+    text-shadow:0 0 6px #ffd700;
+  }
+
+  .vu {
+    width:14px;
+    flex:1;
+    min-height:40px;
+    background:#000;
+    border-radius:7px;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column-reverse;
+    gap:1px;
+    padding:2px;
+  }
+  .vu .bar {
+    flex:1;
+    background:#1a1a1a;
+    border-radius:2px;
+    transition:background 0.05s;
+    min-height:2px;
+  }
+  .vu .bar.on { background:#00ff88; box-shadow:0 0 4px #00ff88; }
+  .vu .bar.warn.on { background:#ffcc00; box-shadow:0 0 4px #ffcc00; }
+  .vu .bar.clip.on { background:#ff2222; box-shadow:0 0 4px #ff2222; }
+
+  .crossfader-wrap {
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+  }
+  .crossfader {
+    width:14px;
+    flex:1;
+    min-height:60px;
+    background:linear-gradient(90deg,#0a0a0a,#1a1a1a);
+    border-radius:7px;
+    position:relative;
+    border:1px solid #2a2a2a;
+    box-shadow:inset 0 0 8px #000;
+    touch-action:none;
+  }
+  .crossfader .cap {
+    position:absolute;
+    left:50%; top:50%;
+    width:32px; height:18px;
+    background:linear-gradient(180deg,#666,#222);
+    border:1px solid #000;
+    border-radius:5px;
+    transform:translate(-50%,-50%);
+    box-shadow:0 2px 5px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.2);
+    pointer-events:none;
+  }
+  .crossfader .cap::after {
+    content:'';
+    position:absolute;
+    left:10%; right:10%; top:50%;
+    height:2px;
+    background:#ffd700;
+    transform:translateY(-50%);
+    box-shadow:0 0 5px #ffd700;
+  }
+  .crossfader-wrap label {
+    font-size:7px;
+    color:#888;
+    letter-spacing:0.5px;
+  }
+
+  .master-knob-wrap { text-align:center; width:100%; }
+  .master-knob-wrap .knob {
+    max-width:38px;
+    margin:0 auto;
+  }
+
+  @media (orientation: landscape) and (max-height: 500px) {
+    .platter { width:60px; height:60px; }
+    .btn { min-height:30px; padding:6px 2px; font-size:9px; }
+    .knob { max-width:34px; }
+    .fader { height:36px; }
+    .deck h2 { font-size:9px; }
+  }
+
+  @media (max-width:360px) {
+    .platter { width:64px; height:64px; }
+    .btn { font-size:9px; padding:8px 2px; min-height:32px; }
+    .knob { max-width:34px; }
+  }
+
+  .unlock-overlay {
+    position:fixed;
+    top:0; left:0; right:0; bottom:0;
+    background:rgba(0,0,0,0.92);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+    color:#fff;
+    text-align:center;
+    padding:20px;
+    transition:opacity 0.3s;
+  }
+  .unlock-overlay.hidden {
+    opacity:0;
+    pointer-events:none;
+    display:none;
+  }
+  .unlock-overlay h2 {
+    color:#00e5ff;
+    font-size:20px;
+    margin-bottom:15px;
+    text-shadow:0 0 15px #00e5ff;
+    letter-spacing:3px;
+  }
+  .unlock-overlay p {
+    color:#aaa;
+    font-size:13px;
+    margin-bottom:25px;
+    line-height:1.6;
+    max-width:280px;
+  }
+  .unlock-overlay button {
+    background:linear-gradient(180deg,#00e5ff,#0088aa);
+    color:#000;
+    border:none;
+    padding:18px 50px;
+    border-radius:30px;
+    font-size:16px;
+    font-weight:bold;
+    letter-spacing:2px;
+    box-shadow:0 0 25px #00e5ff;
+    animation:pulse 1.2s infinite alternate;
+    cursor:pointer;
+    touch-action:manipulation;
+  }
+  .unlock-overlay button:active {
+    transform:scale(0.96);
+  }
+  @keyframes pulse {
+    from { box-shadow:0 0 15px #00e5ff; }
+    to { box-shadow:0 0 35px #00e5ff; }
+  }
+</style>
+</head>
+<body>
+
+<div class="unlock-overlay" id="unlockOverlay">
+  <h2>🎧 DJ MIXER PRO</h2>
+  <p>Mobile pe audio chalane ke liye<br>ek baar tap karna zaroori hai</p>
+  <button id="unlockBtn" type="button">▶ START MIXER</button>
+</div>
+
+<div class="header">
+  <h1>🎧 DJ MIXER</h1>
+  <div class="status off" id="status">OFFLINE</div>
+</div>
+
+<div class="console">
+  <div class="deck left">
+    <h2>DECK A</h2>
+    <input type="file" id="fileA" accept="audio/*">
+    <label for="fileA" class="file-btn" id="labelA">📁 LOAD A</label>
+    <div class="platter" id="platterA"><div class="marker"></div></div>
+    <div class="btn-row">
+      <button class="btn" id="playA" type="button">▶</button>
+      <button class="btn" id="cueA" type="button">CUE</button>
+      <button class="btn" id="loopA" type="button">LOOP</button>
+    </div>
+    <div class="knobs">
+      <div class="knob-wrap"><div class="knob" data-knob="highA"><div class="indicator"></div></div><label>HI</label></div>
+      <div class="knob-wrap"><div class="knob" data-knob="midA"><div class="indicator"></div></div><label>MID</label></div>
+      <div class="knob-wrap"><div class="knob" data-knob="lowA"><div class="indicator"></div></div><label>LOW</label></div>
+    </div>
+    <div class="fader-wrap">
+      <div class="fader" id="faderA"><div class="track"></div><div class="cap"></div></div>
+      <label>VOL A</label>
+    </div>
+  </div>
+
+  <div class="center">
+    <h2>MIX</h2>
+    <div class="vu" id="vuA">
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar warn"></div><div class="bar warn"></div>
+      <div class="bar clip"></div>
+    </div>
+    <div class="crossfader-wrap">
+      <div class="crossfader" id="crossfader"><div class="cap"></div></div>
+      <label>FADE</label>
+    </div>
+    <div class="vu" id="vuB">
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar warn"></div><div class="bar warn"></div>
+      <div class="bar clip"></div>
+    </div>
+    <div class="master-knob-wrap">
+      <div class="knob" data-knob="master"><div class="indicator"></div></div>
+      <label>MASTER</label>
+    </div>
+  </div>
+
+  <div class="deck right">
+    <h2>DECK B</h2>
+    <input type="file" id="fileB" accept="audio/*">
+    <label for="fileB" class="file-btn" id="labelB">📁 LOAD B</label>
+    <div class="platter" id="platterB"><div class="marker"></div></div>
+    <div class="btn-row">
+      <button class="btn" id="playB" type="button">▶</button>
+      <button class="btn" id="cueB" type="button">CUE</button>
+      <button class="btn" id="loopB" type="button">LOOP</button>
+    </div>
+    <div class="knobs">
+      <div class="knob-wrap"><div class="knob" data-knob="highB"><div class="indicator"></div></div><label>HI</label></div>
+      <div class="knob-wrap"><div class="knob" data-knob="midB"><div class="indicator"></div></div><label>MID</label></div>
+      <div class="knob-wrap"><div class="knob" data-knob="lowB"><div class="indicator"></div></div><label>LOW</label></div>
+    </div>
+    <div class="fader-wrap">
+      <div class="fader" id="faderB"><div class="track"></div><div class="cap"></div></div>
+      <label>VOL B</label>
+    </div>
+  </div>
+</div>
+
+<audio id="audioA" crossorigin="anonymous" playsinline webkit-playsinline preload="auto"></audio>
+<audio id="audioB" crossorigin="anonymous" playsinline webkit-playsinline preload="auto"></audio>
+
+<script>
+(function() {
+  'use strict';
+
+  // ================= STATE =================
+  const state = {
+    A: { playing:false, volume:0.8, high:0.5, mid:0.5, low:0.5, loop:false },
+    B: { playing:false, volume:0.8, high:0.5, mid:0.5, low:0.5, loop:false },
+    crossfade: 0.5,
+    master: 0.7,
+    unlocked: false
+  };
+
+  const audioA = document.getElementById('audioA');
+  const audioB = document.getElementById('audioB');
+
+  let ctx = null;
+  let srcA = null, srcB = null;
+  let gainA = null, gainB = null, masterGain = null;
+  const filtersA = {};
+  const filtersB = {};
+  let audioInitialized = false;
+
+  // ================= UNLOCK =================
+  const unlockBtn = document.getElementById('unlockBtn');
+  const overlay = document.getElementById('unlockOverlay');
+  let unlockedOnce = false;
+
+  function hideOverlay() {
+    if (unlockedOnce) return;
+    unlockedOnce = true;
+    overlay.style.display = 'none';
+    overlay.classList.add('hidden');
+    const st = document.getElementById('status');
+    st.textContent = 'ONLINE';
+    st.classList.remove('off');
+    state.unlocked = true;
+    console.log('✅ Unlocked!');
+  }
+
+  function handleUnlock(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    console.log('🔓 Unlock tapped');
+    // Hide overlay IMMEDIATELY (audio wait nahi karta)
+    hideOverlay();
+    // Init audio in background
+    try {
+      initAudio();
+    } catch(err) {
+      console.log('Audio init error:', err);
+    }
+  }
+
+  // Bind multiple events for reliability
+  unlockBtn.addEventListener('click', handleUnlock);
+  unlockBtn.addEventListener('touchend', handleUnlock, {passive:false});
+  unlockBtn.addEventListener('touchstart', handleUnlock, {passive:false});
+  overlay.addEventListener('click', handleUnlock);
+  overlay.addEventListener('touchend', handleUnlock, {passive:false});
+
+  // ================= AUDIO INIT =================
+  function initAudio() {
+    if (audioInitialized) {
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume().catch(function(){});
+      }
+      return;
+    }
+
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) {
+        console.warn('Web Audio API not supported');
+        return;
+      }
+      ctx = new AC();
+
+      masterGain = ctx.createGain();
+      masterGain.gain.value = state.master;
+      masterGain.connect(ctx.destination);
+
+      // Deck A
+      try {
+        srcA = ctx.createMediaElementSource(audioA);
+        filtersA.high = ctx.createBiquadFilter();
+        filtersA.high.type = 'highshelf';
+        filtersA.high.frequency.value = 3000;
+        filtersA.mid = ctx.createBiquadFilter();
+        filtersA.mid.type = 'peaking';
+        filtersA.mid.frequency.value = 1000;
+        filtersA.mid.Q.value = 1;
+        filtersA.low = ctx.createBiquadFilter();
+        filtersA.low.type = 'lowshelf';
+        filtersA.low.frequency.value = 200;
+        gainA = ctx.createGain();
+        gainA.gain.value = state.A.volume;
+        srcA.connect(filtersA.low).connect(filtersA.mid).connect(filtersA.high).connect(gainA).connect(masterGain);
+      } catch(e) {
+        console.warn('Deck A audio error:', e);
+      }
+
+      // Deck B
+      try {
+        srcB = ctx.createMediaElementSource(audioB);
+        filtersB.high = ctx.createBiquadFilter();
+        filtersB.high.type = 'highshelf';
+        filtersB.high.frequency.value = 3000;
+        filtersB.mid = ctx.createBiquadFilter();
+        filtersB.mid.type = 'peaking';
+        filtersB.mid.frequency.value = 1000;
+        filtersB.mid.Q.value = 1;
+        filtersB.low = ctx.createBiquadFilter();
+        filtersB.low.type = 'lowshelf';
+        filtersB.low.frequency.value = 200;
+        gainB = ctx.createGain();
+        gainB.gain.value = state.B.volume;
+        srcB.connect(filtersB.low).connect(filtersB.mid).connect(filtersB.high).connect(gainB).connect(masterGain);
+      } catch(e) {
+        console.warn('Deck B audio error:', e);
+      }
+
+      audioInitialized = true;
+      updateGains();
+
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(function(){});
+      }
+
+      console.log('🎵 Audio initialized, state:', ctx.state);
+    } catch(err) {
+      console.error('Audio init failed:', err);
+    }
+  }
+
+  function updateGains() {
+    if (!ctx || !gainA || !gainB || !masterGain) return;
+    try {
+      const cf = state.crossfade;
+      const cfA = Math.cos(cf * Math.PI / 2);
+      const cfB = Math.sin(cf * Math.PI / 2);
+      gainA.gain.value = state.A.volume * cfA;
+      gainB.gain.value = state.B.volume * cfB;
+      masterGain.gain.value = state.master;
+    } catch(e) {}
+  }
+
+  // ================= FILE LOADING =================
+  function loadFile(deck, file) {
+    if (!file) return;
+    console.log('📁 Loading:', file.name, 'on Deck', deck);
+    try {
+      initAudio();
+      const url = URL.createObjectURL(file);
+      const audio = deck === 'A' ? audioA : audioB;
+      const label = deck === 'A' ? document.getElementById('labelA') : document.getElementById('labelB');
+      audio.src = url;
+      audio.load();
+      const shortName = file.name.length > 10 ? file.name.slice(0, 10) + '…' : file.name;
+      label.textContent = '✓ ' + shortName;
+      label.classList.add('loaded');
+    } catch(err) {
+      console.error('File load error:', err);
+      alert('File load nahi ho payi. Dobara try karo.');
+    }
+  }
+
+  document.getElementById('fileA').addEventListener('change', function(e) {
+    if (e.target.files && e.target.files[0]) loadFile('A', e.target.files[0]);
+  });
+  document.getElementById('fileB').addEventListener('change', function(e) {
+    if (e.target.files && e.target.files[0]) loadFile('B', e.target.files[0]);
+  });
+
+  // ================= PLAY =================
+  function togglePlay(deck) {
+    try {
+      initAudio();
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume().catch(function(){});
+      }
+
+      const audio = deck === 'A' ? audioA : audioB;
+      const btn = document.getElementById(deck === 'A' ? 'playA' : 'playB');
+
+      if (!audio.src) {
+        document.getElementById(deck === 'A' ? 'fileA' : 'fileB').click();
+        return;
+      }
+
+      if (state[deck].playing) {
+        audio.pause();
+        state[deck].playing = false;
+        btn.textContent = '▶';
+        btn.classList.remove('active');
+      } else {
+        const playPromise = audio.play();
+        if (playPromise && playPromise.then) {
+          playPromise.then(function() {
+            state[deck].playing = true;
+            btn.textContent = '⏸';
+            btn.classList.add('active');
+          }).catch(function(err) {
+            console.warn('Play error:', err);
+            alert('Audio play nahi ho raha.\n\n1. Screen ek baar tap karo\n2. Phir PLAY dabao\n3. Phone volume check karo');
+          });
+        } else {
+          state[deck].playing = true;
+          btn.textContent = '⏸';
+          btn.classList.add('active');
+        }
+      }
+    } catch(err) {
+      console.error('Toggle play error:', err);
+    }
+  }
+
+  document.getElementById('playA').addEventListener('click', function() { togglePlay('A'); });
+  document.getElementById('playB').addEventListener('click', function() { togglePlay('B'); });
+
+  document.getElementById('cueA').addEventListener('click', function() {
+    try { audioA.currentTime = 0; } catch(e){}
+  });
+  document.getElementById('cueB').addEventListener('click', function() {
+    try { audioB.currentTime = 0; } catch(e){}
+  });
+
+  document.getElementById('loopA').addEventListener('click', function(e) {
+    state.A.loop = !state.A.loop;
+    audioA.loop = state.A.loop;
+    e.target.classList.toggle('active', state.A.loop);
+  });
+  document.getElementById('loopB').addEventListener('click', function(e) {
+    state.B.loop = !state.B.loop;
+    audioB.loop = state.B.loop;
+    e.target.classList.toggle('active', state.B.loop);
+  });
+
+  // ================= KNOBS =================
+  document.querySelectorAll('.knob').forEach(function(knob) {
+    let dragging = false;
+    let startY = 0;
+    let startVal = 0;
+    const key = knob.dataset.knob;
+    let value = 0.5;
+
+    function setKnob(v) {
+      value = Math.max(0, Math.min(1, v));
+      const angle = -135 + value * 270;
+      knob.querySelector('.indicator').style.transform = 'translateX(-50%) rotate(' + angle + 'deg)';
+      applyKnob(key, value);
+    }
+
+    function applyKnob(k, v) {
+      if (!ctx) return;
+      try {
+        if (k === 'highA' && filtersA.high) { filtersA.high.gain.value = (v - 0.5) * 24; state.A.high = v; }
+        if (k === 'midA' && filtersA.mid)   { filtersA.mid.gain.value  = (v - 0.5) * 24; state.A.mid  = v; }
+        if (k === 'lowA' && filtersA.low)   { filtersA.low.gain.value  = (v - 0.5) * 24; state.A.low  = v; }
+        if (k === 'highB' && filtersB.high) { filtersB.high.gain.value = (v - 0.5) * 24; state.B.high = v; }
+        if (k === 'midB' && filtersB.mid)   { filtersB.mid.gain.value  = (v - 0.5) * 24; state.B.mid  = v; }
+        if (k === 'lowB' && filtersB.low)   { filtersB.low.gain.value  = (v - 0.5) * 24; state.B.low  = v; }
+        if (k === 'master') { state.master = v; updateGains(); }
+      } catch(e){}
+    }
+
+    function startDrag(y) { dragging = true; startY = y; startVal = value; }
+    function moveDrag(y) { if (dragging) setKnob(startVal + (startY - y) / 120); }
+    function endDrag() { dragging = false; }
+
+    // Mouse
+    knob.addEventListener('mousedown', function(e) { e.preventDefault(); startDrag(e.clientY); });
+    window.addEventListener('mousemove', function(e) { moveDrag(e.clientY); });
+    window.addEventListener('mouseup', endDrag);
+
+    // Touch
+    knob.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      startDrag(e.touches[0].clientY);
+    }, {passive:false});
+
+    knob.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      moveDrag(e.touches[0].clientY);
+    }, {passive:false});
+
+    knob.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      endDrag();
+    }, {passive:false});
+
+    setKnob(0.5);
+  });
+
+  // ================= VOLUME FADERS =================
+  document.querySelectorAll('.fader').forEach(function(fader) {
+    const deck = fader.id === 'faderA' ? 'A' : 'B';
+    let dragging = false;
+    const cap = fader.querySelector('.cap');
+
+    function setFader(clientX) {
+      const rect = fader.getBoundingClientRect();
+      let v = (clientX - rect.left) / rect.width;
+      v = Math.max(0, Math.min(1, v));
+      cap.style.left = (v * 100) + '%';
+      state[deck].volume = v;
+      updateGains();
+    }
+
+    fader.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      dragging = true;
+      setFader(e.clientX);
+    });
+    fader.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      dragging = true;
+      setFader(e.touches[0].clientX);
+    }, {passive:false});
+
+    window.addEventListener('mousemove', function(e) { if (dragging) setFader(e.clientX); });
+    window.addEventListener('touchmove', function(e) {
+      if (dragging) {
+        e.preventDefault();
+        setFader(e.touches[0].clientX);
+      }
+    }, {passive:false});
+
+    window.addEventListener('mouseup', function() { dragging = false; });
+    window.addEventListener('touchend', function() { dragging = false; });
+
+    cap.style.left = '80%';
+    state[deck].volume = 0.8;
+  });
+
+  // ================= CROSSFADER =================
+  (function() {
+    const cf = document.getElementById('crossfader');
+    const cap = cf.querySelector('.cap');
+    let dragging = false;
+
+    function setCF(clientY) {
+      const rect = cf.getBoundingClientRect();
+      let v = 1 - (clientY - rect.top) / rect.height;
+      v = Math.max(0, Math.min(1, v));
+      cap.style.top = ((1 - v) * 100) + '%';
+      state.crossfade = v;
+      updateGains();
+    }
+
+    cf.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      dragging = true;
+      setCF(e.clientY);
+    });
+    cf.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      dragging = true;
+      setCF(e.touches[0].clientY);
+    }, {passive:false});
+
+    window.addEventListener('mousemove', function(e) { if (dragging) setCF(e.clientY); });
+    window.addEventListener('touchmove', function(e) {
+      if (dragging) {
+        e.preventDefault();
+        setCF(e.touches[0].clientY);
+      }
+    }, {passive:false});
+
+    window.addEventListener('mouseup', function() { dragging = false; });
+    window.addEventListener('touchend', function() { dragging = false; });
+
+    cap.style.top = '50%';
+  })();
+
+  // ================= PLATTER ANIMATION =================
+  let angleA = 0, angleB = 0, lastTime = performance.now();
+  const platterA = document.getElementById('platterA');
+  const platterB = document.getElementById('platterB');
+
+  function animatePlatters(now) {
+    const dt = (now - lastTime) / 1000;
+    lastTime = now;
+    if (state.A.playing) {
+      angleA = (angleA + 360 * dt * 1.5) % 360;
+      platterA.style.transform = 'rotate(' + angleA + 'deg)';
+    }
+    if (state.B.playing) {
+      angleB = (angleB + 360 * dt * 1.5) % 360;
+      platterB.style.transform = 'rotate(' + angleB + 'deg)';
+    }
+    requestAnimationFrame(animatePlatters);
+  }
+  requestAnimationFrame(animatePlatters);
+
+  // ================= VU METERS =================
+  const vuAbars = document.querySelectorAll('#vuA .bar');
+  const vuBbars = document.querySelectorAll('#vuB .bar');
+
+  function animateVU() {
+    if (ctx) {
+      const cfA = Math.cos(state.crossfade * Math.PI / 2);
+      const cfB = Math.sin(state.crossfade * Math.PI / 2);
+      const levelA = state.A.playing ? state.A.volume * cfA * state.master * (0.7 + Math.random() * 0.3) : 0;
+      const levelB = state.B.playing ? state.B.volume * cfB * state.master * (0.7 + Math.random() * 0.3) : 0;
+      updateVU(vuAbars, levelA);
+      updateVU(vuBbars, levelB);
+    }
+    requestAnimationFrame(animateVU);
+  }
+
+  function updateVU(bars, level) {
+    for (let i = 0; i < bars.length; i++) {
+      const threshold = (i + 1) / bars.length;
+      bars[i].classList.toggle('on', level > threshold * 0.9 && level > 0.05);
+    }
+  }
+  requestAnimationFrame(animateVU);
+
+  // Prevent scroll during drag
+  const consoleEl = document.querySelector('.console');
+  if (consoleEl) {
+    consoleEl.addEventListener('touchmove', function(e) {
+      if (e.target.closest('.knob, .fader, .crossfader')) {
+        e.preventDefault();
+      }
+    }, {passive:false});
+  }
+
+  // Prevent double-tap zoom
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', function(e) {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+      e.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, {passive:false});
+
+  console.log('%c🎧 DJ Mixer Pro Ready!', 'color:#00e5ff;font-size:14px;font-weight:bold');
+})();
+</script>
+</body>
+</html>
