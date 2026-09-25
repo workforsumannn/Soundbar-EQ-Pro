@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a14">
+<title>Soundbar EQ Pro — 32 Band</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent; }
+  html, body {
+    min-height:100%;
+    background: radial-gradient(circle at 50% 0%, #1a1a2e, #0a0a14);
+    font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+    color:#eee;
+    overflow-x:hidden;
+  }
+  body { padding:16px; padding-top: calc(16px + env(safe-area-inset-top)); padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  .app { max-width:520px; margin:0 auto; }
+  .title {
+    text-align:center; font-size:18px; letter-spacing:3px;
+    color:#00e5ff; text-shadow:0 0 15px #00e5ff;
+    margin-bottom:4px; font-weight:bold;
+  }
+  .subtitle {
+    text-align:center; font-size:10px; color:#666;
+    letter-spacing:2px; margin-bottom:18px;
+  }
+  .card {
+    background:linear-gradient(180deg,#1c1c2b,#111119);
+    border:1px solid #2a2a3d; border-radius:16px;
+    padding:14px; margin-bottom:12px;
+    box-shadow:0 0 30px rgba(0,229,255,0.08), inset 0 0 20px rgba(0,0,0,0.6);
+  }
+  .section-title {
+    font-size:11px; color:#00e5ff; letter-spacing:2px;
+    margin-bottom:12px; text-align:center; text-transform:uppercase;
+  }
+
+  /* File load */
+  .file-btn {
+    display:block;
+    background:linear-gradient(180deg,#2a2a3d,#1a1a26);
+    border:2px dashed #444; color:#aaa;
+    padding:20px; border-radius:12px;
+    font-size:13px; text-align:center; font-weight:bold;
+    cursor:pointer; transition:all 0.3s; letter-spacing:1px;
+  }
+  .file-btn:active { transform:scale(0.98); }
+  .file-btn.loaded {
+    border-color:#00ff88; color:#00ff88; border-style:solid;
+    background:linear-gradient(180deg,#1a3d2a,#0a1a14);
+  }
+  .file-btn .icon { font-size:24px; display:block; margin-bottom:6px; }
+  input[type=file] { display:none; }
+
+  .now-playing {
+    text-align:center; padding:8px; font-size:11px;
+    color:#00e5ff; letter-spacing:1px; min-height:28px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    margin-top:10px;
+  }
+  .now-playing.idle { color:#555; }
+
+  /* Seek */
+  .seek-wrap { display:flex; align-items:center; gap:8px; margin:10px 0; }
+  .time {
+    font-size:10px; color:#888; min-width:36px;
+    text-align:center; font-variant-numeric: tabular-nums;
+  }
+  .seek {
+    flex:1; height:8px; background:#0a0a0a; border-radius:4px;
+    position:relative; cursor:pointer;
+    box-shadow:inset 0 0 5px #000; touch-action:none;
+  }
+  .seek .fill {
+    position:absolute; left:0; top:0; bottom:0;
+    background:linear-gradient(90deg,#00e5ff,#0088aa);
+    border-radius:4px; box-shadow:0 0 8px #00e5ff; width:0%;
+  }
+  .seek .thumb {
+    position:absolute; top:50%; width:16px; height:16px;
+    background:#00e5ff; border-radius:50%;
+    transform:translate(-50%,-50%);
+    box-shadow:0 0 10px #00e5ff; left:0%; pointer-events:none;
+  }
+
+  /* Controls */
+  .controls {
+    display:grid; grid-template-columns:1fr 1fr 1fr;
+    gap:10px; margin-top:12px;
+  }
+  .ctrl-btn {
+    background:linear-gradient(180deg,#3a3a52,#22222f);
+    border:1px solid #44445c; color:#ccc;
+    padding:14px; border-radius:12px;
+    font-size:18px; font-weight:bold; cursor:pointer;
+    box-shadow:0 3px 0 #000; transition:all 0.1s;
+    touch-action:manipulation;
+  }
+  .ctrl-btn:active { transform:translateY(3px); box-shadow:none; }
+  .ctrl-btn.play {
+    background:linear-gradient(180deg,#00e5ff,#0088aa);
+    color:#000; box-shadow:0 3px 0 #005566, 0 0 20px #00e5ff;
+  }
+  .ctrl-btn.play.active {
+    background:linear-gradient(180deg,#ff4d8d,#aa2d5d);
+    box-shadow:0 3px 0 #661a3a, 0 0 20px #ff4d8d;
+  }
+
+  /* Presets */
+  .presets {
+    display:grid; grid-template-columns:1fr 1fr 1fr;
+    gap:6px;
+  }
+  .preset {
+    background:linear-gradient(180deg,#2a2a3d,#1a1a26);
+    border:1px solid #444; color:#ccc;
+    padding:10px 4px; border-radius:8px;
+    font-size:10px; font-weight:bold; cursor:pointer;
+    letter-spacing:0.5px; transition:all 0.15s;
+    touch-action:manipulation;
+  }
+  .preset:active { transform:scale(0.96); }
+  .preset.active {
+    background:linear-gradient(180deg,#00e5ff,#0088aa);
+    color:#000; border-color:#00e5ff; box-shadow:0 0 15px #00e5ff;
+  }
+
+  /* 32-Band EQ */
+  .eq-scroll-wrap {
+    position:relative;
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:8px;
+    scrollbar-width:thin;
+    scrollbar-color:#00e5ff #1a1a26;
+  }
+  .eq-scroll-wrap::-webkit-scrollbar {
+    height:6px;
+  }
+  .eq-scroll-wrap::-webkit-scrollbar-track {
+    background:#1a1a26;
+    border-radius:3px;
+  }
+  .eq-scroll-wrap::-webkit-scrollbar-thumb {
+    background:#00e5ff;
+    border-radius:3px;
+  }
+  .eq-32 {
+    display:flex;
+    gap:6px;
+    padding:4px;
+    min-width: max-content;
+  }
+  .eq-band {
+    width:38px;
+    flex-shrink:0;
+    text-align:center;
+  }
+  .eq-band .freq {
+    font-size:8px;
+    color:#666;
+    letter-spacing:0;
+    margin-bottom:4px;
+    height:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-variant-numeric: tabular-nums;
+  }
+  .v-slider {
+    width:100%;
+    height:180px;
+    background:linear-gradient(180deg,#0a0a0a,#1a1a1a);
+    border-radius:10px;
+    position:relative;
+    border:1px solid #2a2a2a;
+    box-shadow:inset 0 0 8px #000;
+    touch-action:none;
+    overflow:hidden;
+  }
+  .v-slider .mid-line {
+    position:absolute;
+    left:0; right:0;
+    top:50%;
+    height:1px;
+    background:#333;
+    pointer-events:none;
+  }
+  .v-slider .fill {
+    position:absolute;
+    left:0; right:0;
+    bottom:50%;
+    background:linear-gradient(180deg,#00e5ff,#0066aa);
+    pointer-events:none;
+  }
+  .v-slider .fill.negative {
+    top:50%;
+    bottom:auto;
+    background:linear-gradient(180deg,#aa0066,#ff4d8d);
+  }
+  .v-slider .thumb {
+    position:absolute;
+    left:5%;
+    width:90%;
+    height:10px;
+    background:linear-gradient(180deg,#666,#222);
+    border:1px solid #000;
+    border-radius:3px;
+    transform:translateY(-50%);
+    top:50%;
+    box-shadow:0 2px 5px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.2);
+    pointer-events:none;
+  }
+  .v-slider .thumb::after {
+    content:'';
+    position:absolute;
+    left:15%; right:15%; top:50%;
+    height:2px;
+    background:#00e5ff;
+    transform:translateY(-50%);
+    box-shadow:0 0 5px #00e5ff;
+  }
+  .eq-band .value {
+    font-size:8px;
+    color:#00e5ff;
+    margin-top:4px;
+    letter-spacing:0;
+    font-variant-numeric: tabular-nums;
+    height:10px;
+  }
+
+  /* Bass Vibration Card */
+  .bass-vibe-card {
+    background:linear-gradient(180deg,#2a1c2b,#180a14);
+    border:1px solid #4a2a3d;
+    border-radius:16px;
+    padding:14px;
+    margin-bottom:12px;
+    box-shadow:0 0 25px rgba(255,77,141,0.15), inset 0 0 20px rgba(0,0,0,0.6);
+  }
+  .bass-vibe-card .section-title { color:#ff4d8d; }
+
+  .bass-vibe-btn {
+    width:100%;
+    background:linear-gradient(180deg,#3a2a3d,#221a26);
+    border:2px solid #553;
+    color:#ccc;
+    padding:16px;
+    border-radius:12px;
+    font-size:13px;
+    font-weight:bold;
+    letter-spacing:1.5px;
+    cursor:pointer;
+    transition:all 0.15s;
+    margin-bottom:12px;
+    touch-action:manipulation;
+  }
+  .bass-vibe-btn:active { transform:scale(0.98); }
+  .bass-vibe-btn.active {
+    background:linear-gradient(180deg,#ff4d8d,#aa2d5d);
+    color:#fff;
+    border-color:#ff4d8d;
+    box-shadow:0 0 25px #ff4d8d, inset 0 0 15px rgba(255,255,255,0.2);
+    animation:vibePulse 0.8s infinite alternate;
+  }
+  @keyframes vibePulse {
+    from { box-shadow:0 0 20px #ff4d8d; }
+    to { box-shadow:0 0 35px #ff4d8d; }
+  }
+
+  /* Limiter Badge */
+  .limiter-badge {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:8px;
+    background:linear-gradient(180deg,#1a3d2a,#0a1a14);
+    border:1px solid #00ff88;
+    border-radius:8px;
+    margin-bottom:12px;
+    font-size:10px;
+    color:#00ff88;
+    letter-spacing:1px;
+    font-weight:bold;
+  }
+  .limiter-badge .dot {
+    width:8px; height:8px;
+    border-radius:50%;
+    background:#00ff88;
+    box-shadow:0 0 8px #00ff88;
+    animation:blink 1.5s infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity:1; }
+    50% { opacity:0.3; }
+  }
+
+  /* Output / Reset */
+  .device-btn {
+    width:100%;
+    background:linear-gradient(180deg,#2a2a3d,#1a1a26);
+    border:1px solid #444; color:#aaa;
+    padding:12px; border-radius:10px;
+    font-size:12px; font-weight:bold;
+    cursor:pointer; letter-spacing:1px;
+    transition:all 0.15s; margin-bottom:8px;
+  }
+  .device-btn:active { transform:scale(0.98); }
+  .device-btn.supported { border-color:#00ff88; color:#00ff88; }
+  .device-btn.not-supported { border-color:#666; color:#666; cursor:not-allowed; }
+
+  .boost-row {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-bottom:12px;
+  }
+  .boost-btn {
+    background:linear-gradient(180deg,#3a2a3d,#221a26);
+    border:1px solid #553;
+    color:#ccc;
+    padding:12px;
+    border-radius:10px;
+    font-size:11px;
+    font-weight:bold;
+    letter-spacing:1px;
+    cursor:pointer;
+    transition:all 0.15s;
+  }
+  .boost-btn:active { transform:scale(0.97); }
+  .boost-btn.active {
+    background:linear-gradient(180deg,#ff4d8d,#aa2d5d);
+    color:#000;
+    border-color:#ff4d8d;
+    box-shadow:0 0 15px #ff4d8d;
+  }
+
+  /* Volume */
+  .vol-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .vol-row .icon { font-size:16px; color:#888; }
+  .h-slider {
+    flex:1; height:36px;
+    background:linear-gradient(180deg,#0a0a0a,#1a1a1a);
+    border-radius:18px; position:relative;
+    border:1px solid #2a2a2a;
+    box-shadow:inset 0 0 8px #000;
+    touch-action:none; overflow:hidden;
+  }
+  .h-slider .fill {
+    position:absolute; left:0; top:0; bottom:0;
+    background:linear-gradient(90deg,#00e5ff,#0088aa);
+    border-radius:18px; pointer-events:none;
+  }
+  .h-slider .thumb {
+    position:absolute; top:50%; width:24px; height:28px;
+    background:linear-gradient(180deg,#555,#222);
+    border:1px solid #000; border-radius:6px;
+    transform:translate(-50%,-50%);
+    box-shadow:0 2px 5px rgba(0,0,0,0.8);
+    pointer-events:none;
+  }
+  .h-slider .thumb::after {
+    content:''; position:absolute;
+    left:20%; right:20%; top:50%; height:2px;
+    background:#00e5ff; transform:translateY(-50%);
+    box-shadow:0 0 5px #00e5ff;
+  }
+  .vol-row .value {
+    font-size:11px; color:#00e5ff; min-width:44px;
+    text-align:right; font-variant-numeric: tabular-nums;
+  }
+
+  /* Toast */
+  .toast {
+    position:fixed; bottom:20px; left:50%;
+    transform:translateX(-50%) translateY(100px);
+    background:rgba(0,0,0,0.95); color:#fff;
+    padding:12px 20px; border-radius:10px;
+    font-size:13px; max-width:90%; text-align:center;
+    z-index:9999; transition:transform 0.3s;
+    border:1px solid #333;
+    box-shadow:0 5px 20px rgba(0,0,0,0.8);
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+  .toast.error { border-color:#ff4444; color:#ff8888; }
+  .toast.success { border-color:#00ff88; color:#00ff88; }
+
+  /* Unlock overlay */
+  .unlock-overlay {
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    background:rgba(0,0,0,0.95);
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    z-index:10000; padding:20px; text-align:center;
+  }
+  .unlock-overlay.hidden { display:none; }
+  .unlock-overlay h2 {
+    color:#00e5ff; font-size:22px; margin-bottom:12px;
+    text-shadow:0 0 15px #00e5ff; letter-spacing:3px;
+  }
+  .unlock-overlay p {
+    color:#888; font-size:13px; margin-bottom:24px;
+    line-height:1.6; max-width:280px;
+  }
+  .unlock-overlay button {
+    background:linear-gradient(180deg,#00e5ff,#0088aa);
+    color:#000; border:none;
+    padding:16px 44px; border-radius:30px;
+    font-size:15px; font-weight:bold;
+    letter-spacing:2px; box-shadow:0 0 25px #00e5ff;
+    animation:pulse 1.2s infinite alternate;
+    cursor:pointer;
+  }
+  .unlock-overlay button:active { transform:scale(0.96); }
+  @keyframes pulse {
+    from { box-shadow:0 0 15px #00e5ff; }
+    to { box-shadow:0 0 35px #00e5ff; }
+  }
+
+  .hint {
+    font-size:10px; color:#555;
+    text-align:center; margin-top:8px; line-height:1.5;
+  }
+  .warning-box {
+    background:linear-gradient(180deg,#3a1a1a,#1a0a0a);
+    border:1px solid #662222;
+    border-radius:10px;
+    padding:10px;
+    margin-top:10px;
+    font-size:10px;
+    color:#ff8888;
+    line-height:1.5;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<div class="unlock-overlay" id="unlockOverlay">
+  <h2>🎧 SOUNDBAR EQ PRO</h2>
+  <p>Soundbar ko Bluetooth se connect karo<br>phir START dabao</p>
+  <button id="unlockBtn" type="button">▶ START</button>
+</div>
+
+<div class="app">
+  <div class="title">🎧 SOUNDBAR EQ PRO</div>
+  <div class="subtitle">32-BAND EQ + LIMITER + COMPRESSOR</div>
+
+  <!-- Player Card -->
+  <div class="card">
+    <input type="file" id="audioFile" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac">
+    <label for="audioFile" class="file-btn" id="fileLabel">
+      <span class="icon">📁</span>
+      TAP TO LOAD SONG
+    </label>
+
+    <div class="now-playing idle" id="nowPlaying">— No song loaded —</div>
+
+    <div class="seek-wrap">
+      <div class="time" id="currentTime">0:00</div>
+      <div class="seek" id="seek">
+        <div class="fill" id="seekFill"></div>
+        <div class="thumb" id="seekThumb"></div>
+      </div>
+      <div class="time" id="totalTime">0:00</div>
+    </div>
+
+    <div class="controls">
+      <button class="ctrl-btn" id="rewindBtn" type="button">⏪</button>
+      <button class="ctrl-btn play" id="playBtn" type="button">▶</button>
+      <button class="ctrl-btn" id="forwardBtn" type="button">⏩</button>
+    </div>
+
+    <div class="boost-row" style="margin-top:12px;">
+      <button class="boost-btn" id="speedBtn" type="button">⚡ SPEED 1.0x</button>
+      <button class="boost-btn" id="loopBtn" type="button">🔁 LOOP OFF</button>
+    </div>
+  </div>
+
+  <!-- Limiter Badge -->
+  <div class="limiter-badge">
+    <span class="dot"></span>
+    LIMITER + COMPRESSOR ACTIVE — Speaker Safe
+  </div>
+
+  <!-- 💥 BASS VIBRATION Card -->
+  <div class="bass-vibe-card">
+    <div class="section-title">💥 BASS VIBRATION</div>
+
+    <button class="bass-vibe-btn" id="bassVibeBtn" type="button">
+      💥 BASS VIBRATION: OFF
+    </button>
+
+    <div class="vol-row" style="margin-bottom:10px;">
+      <div class="icon">🔊</div>
+      <div class="h-slider" id="subBassSlider">
+        <div class="fill" id="subBassFill"></div>
+        <div class="thumb" id="subBassThumb"></div>
+      </div>
+      <div class="value" id="subBassValue">0%</div>
+    </div>
+    <div class="hint" style="margin-bottom:12px;">Sub-Bass (30-80 Hz) — Limiter auto-protect karega</div>
+
+    <div class="vol-row" style="margin-bottom:10px;">
+      <div class="icon">💥</div>
+      <div class="h-slider" id="punchSlider">
+        <div class="fill" id="punchFill"></div>
+        <div class="thumb" id="punchThumb"></div>
+      </div>
+      <div class="value" id="punchValue">0%</div>
+    </div>
+    <div class="hint">Punch — kick drum boost</div>
+
+    <div class="warning-box">
+      ⚠️ Ab speaker safe hai — Limiter automatically peak rok dega<br>
+      Bass full karo, "fhuurrr fhuurrr" nahi hoga
+    </div>
+  </div>
+
+  <!-- Presets Card -->
+  <div class="card">
+    <div class="section-title">🎚️ Presets</div>
+    <div class="presets" id="presets">
+      <button class="preset active" data-preset="flat" type="button">FLAT</button>
+      <button class="preset" data-preset="bass" type="button">BASS BOOST</button>
+      <button class="preset" data-preset="bollywood" type="button">BOLLYWOOD</button>
+      <button class="preset" data-preset="vocal" type="button">VOCAL</button>
+      <button class="preset" data-preset="party" type="button">PARTY</button>
+      <button class="preset" data-preset="rock" type="button">ROCK</button>
+      <button class="preset" data-preset="jazz" type="button">JAZZ</button>
+      <button class="preset" data-preset="classical" type="button">CLASSICAL</button>
+      <button class="preset" data-preset="night" type="button">NIGHT</button>
+    </div>
+  </div>
+
+  <!-- 32-Band EQ Card -->
+  <div class="card">
+    <div class="section-title">🎛️ 32-Band Equalizer (5Hz - 20kHz)</div>
+    <div class="hint" style="margin-bottom:10px;">← Swipe karke scroll karo →</div>
+
+    <div class="eq-scroll-wrap">
+      <div class="eq-32" id="eq32"></div>
+    </div>
+
+    <div class="hint">Slider upar = boost • Slider neeche = cut<br>Range: -15 dB se +15 dB • Limiter protect karega</div>
+  </div>
+
+  <!-- Volume & Output -->
+  <div class="card">
+    <div class="section-title">🔊 Master Volume</div>
+    <div class="vol-row">
+      <div class="icon">🔈</div>
+      <div class="h-slider" id="volumeSlider">
+        <div class="fill" id="volFill"></div>
+        <div class="thumb" id="volThumb"></div>
+      </div>
+      <div class="value" id="volValue">100%</div>
+    </div>
+
+    <div class="section-title">📱 Output Device</div>
+    <button class="device-btn" id="deviceBtn" type="button">🔊 SELECT OUTPUT</button>
+    <div class="hint" id="deviceHint">Chrome browser mein hi support hai</div>
+
+    <button class="device-btn" id="resetBtn" type="button" style="margin-top:8px; border-color:#ff4444; color:#ff4444;">
+      🔄 RESET ALL
+    </button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<audio id="audio" crossorigin="anonymous" playsinline webkit-playsinline preload="auto"></audio>
+
+<script>
+(function() {
+  'use strict';
+
+  // ================= 32 FREQUENCIES =================
+  const FREQS = [
+    5, 7, 9, 11, 15, 19, 25, 33,
+    43, 56, 73, 95, 125, 160, 210, 280,
+    360, 470, 620, 810, 1100, 1400, 1800, 2400,
+    3100, 4000, 5200, 6900, 9000, 11500, 15500, 20000
+  ];
+
+  const FREQ_LABELS = [
+    '5', '7', '9', '11', '15', '19', '25', '33',
+    '43', '56', '73', '95', '125', '160', '210', '280',
+    '360', '470', '620', '810', '1.1k', '1.4k', '1.8k', '2.4k',
+    '3.1k', '4k', '5.2k', '6.9k', '9k', '11.5k', '15.5k', '20k'
+  ];
+
+  // ================= STATE =================
+  const state = {
+    unlocked: false,
+    playing: false,
+    loaded: false,
+    volume: 1.0,
+    eq: {}, // per-freq gains
+    currentPreset: 'flat',
+    speed: 1.0,
+    loop: false,
+    bassVibeOn: false,
+    subBass: 0,
+    punch: 0
+  };
+
+  FREQS.forEach(function(f) { state.eq[f] = 0; });
+
+  // Presets defined on key bands (low, mid, high + shape)
+  const PRESETS = {
+    flat:      { shape: 'flat' },
+    bass:      { shape: 'bass' },
+    bollywood: { shape: 'bollywood' },
+    vocal:     { shape: 'vocal' },
+    party:     { shape: 'party' },
+    rock:      { shape: 'rock' },
+    jazz:      { shape: 'jazz' },
+    classical: { shape: 'classical' },
+    night:     { shape: 'night' }
+  };
+
+  const audio = document.getElementById('audio');
+  const fileInput = document.getElementById('audioFile');
+  const fileLabel = document.getElementById('fileLabel');
+  const nowPlaying = document.getElementById('nowPlaying');
+  const playBtn = document.getElementById('playBtn');
+  const rewindBtn = document.getElementById('rewindBtn');
+  const forwardBtn = document.getElementById('forwardBtn');
+  const seek = document.getElementById('seek');
+  const seekFill = document.getElementById('seekFill');
+  const seekThumb = document.getElementById('seekThumb');
+  const currentTimeEl = document.getElementById('currentTime');
+  const totalTimeEl = document.getElementById('totalTime');
+  const volumeSlider = document.getElementById('volumeSlider');
+  const volFill = document.getElementById('volFill');
+  const volThumb = document.getElementById('volThumb');
+  const volValue = document.getElementById('volValue');
+  const deviceBtn = document.getElementById('deviceBtn');
+  const deviceHint = document.getElementById('deviceHint');
+  const toastEl = document.getElementById('toast');
+  const speedBtn = document.getElementById('speedBtn');
+  const loopBtn = document.getElementById('loopBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const bassVibeBtn = document.getElementById('bassVibeBtn');
+  const eq32Container = document.getElementById('eq32');
+
+  let ctx = null;
+  let sourceNode = null;
+  let gainNode = null;
+  let limiterNode = null;
+  let compressorNode = null;
+  let subBassFilter = null;
+  let punchFilter = null;
+  let filters = []; // 32 filters
+  let audioInitialized = false;
+
+  // ================= TOAST =================
+  let toastTimer = null;
+  function showToast(msg, type) {
+    toastEl.textContent = msg;
+    toastEl.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { toastEl.className = 'toast'; }, 2500);
+  }
+
+  // ================= BUILD 32-BAND UI =================
+  function buildEQ32UI() {
+    FREQS.forEach(function(freq, i) {
+      const band = document.createElement('div');
+      band.className = 'eq-band';
+      band.innerHTML =
+        '<div class="freq">' + FREQ_LABELS[i] + '</div>' +
+        '<div class="v-slider" data-freq="' + freq + '">' +
+          '<div class="mid-line"></div>' +
+          '<div class="fill" id="fill-' + freq + '"></div>' +
+          '<div class="thumb" id="thumb-' + freq + '"></div>' +
+        '</div>' +
+        '<div class="value" id="val-' + freq + '">0</div>';
+      eq32Container.appendChild(band);
+    });
+
+    // Attach slider events
+    document.querySelectorAll('.eq-32 .v-slider').forEach(function(slider) {
+      const freq = parseInt(slider.dataset.freq);
+      let dragging = false;
+
+      function setFromY(clientY) {
+        const rect = slider.getBoundingClientRect();
+        let pct = (clientY - rect.top) / rect.height;
+        pct = Math.max(0, Math.min(1, pct));
+        const db = Math.round(15 - pct * 30);
+        updateEQ(freq, db);
+        state.currentPreset = 'custom';
+        document.querySelectorAll('.preset').forEach(function(b) { b.classList.remove('active'); });
+      }
+
+      slider.addEventListener('mousedown', function(e) { e.preventDefault(); dragging = true; setFromY(e.clientY); });
+      slider.addEventListener('touchstart', function(e) { e.preventDefault(); dragging = true; setFromY(e.touches[0].clientY); }, {passive:false});
+      window.addEventListener('mousemove', function(e) { if (dragging) setFromY(e.clientY); });
+      window.addEventListener('touchmove', function(e) {
+        if (dragging) { e.preventDefault(); setFromY(e.touches[0].clientY); }
+      }, {passive:false});
+      window.addEventListener('mouseup', function() { dragging = false; });
+      window.addEventListener('touchend', function() { dragging = false; });
+    });
+
+    // Init visuals
+    FREQS.forEach(function(f) { updateEQVisual(f, 0); });
+  }
+
+  // ================= EQ UPDATE =================
+  function updateEQ(freq, db) {
+    db = Math.max(-15, Math.min(15, db));
+    state.eq[freq] = db;
+    if (audioInitialized) {
+      const idx = FREQS.indexOf(freq);
+      if (idx >= 0 && filters[idx]) {
+        try { filters[idx].gain.value = db; } catch(e){}
+      }
+    }
+    updateEQVisual(freq, db);
+  }
+
+  function updateEQVisual(freq, db) {
+    const pct = ((db + 15) / 30) * 100;
+    const thumb = document.getElementById('thumb-' + freq);
+    const fill = document.getElementById('fill-' + freq);
+    const val = document.getElementById('val-' + freq);
+    if (!thumb || !fill || !val) return;
+
+    thumb.style.top = (100 - pct) + '%';
+
+    if (db >= 0) {
+      fill.className = 'fill';
+      fill.style.bottom = '50%';
+      fill.style.top = 'auto';
+      fill.style.height = (pct - 50) + '%';
+    } else {
+      fill.className = 'fill negative';
+      fill.style.top = '50%';
+      fill.style.bottom = 'auto';
+      fill.style.height = (50 - pct) + '%';
+    }
+
+    val.textContent = (db > 0 ? '+' : '') + db;
+  }
+
+  // ================= PRESET SHAPES =================
+  // Returns dB for a given frequency based on preset shape
+  function getPresetGain(shape, freq) {
+    // Define anchor points: [freq, dB]
+    const shapes = {
+      flat:      [[20,0],[20000,0]],
+      bass:      [[20,12],[60,10],[200,4],[500,0],[1000,-2],[5000,0],[20000,3]],
+      bollywood: [[20,7],[60,8],[200,5],[500,3],[1000,4],[3000,5],[5000,6],[20000,5]],
+      vocal:     [[20,-4],[200,-2],[500,2],[1000,8],[2000,9],[5000,6],[20000,3]],
+      party:     [[20,8],[60,9],[200,4],[500,-1],[1000,0],[3000,4],[5000,6],[20000,7]],
+      rock:      [[20,5],[60,6],[200,2],[500,-2],[1000,-3],[3000,2],[5000,6],[20000,8]],
+      jazz:      [[20,4],[100,3],[300,2],[800,3],[2000,3],[5000,4],[20000,5]],
+      classical: [[20,1],[100,1],[500,0],[1000,0],[3000,3],[8000,5],[20000,5]],
+      night:     [[20,-4],[100,-3],[500,1],[1000,2],[3000,0],[8000,-3],[20000,-5]]
+    };
+
+    const anchors = shapes[shape] || shapes.flat;
+
+    // Linear interpolation
+    if (freq <= anchors[0][0]) return anchors[0][1];
+    if (freq >= anchors[anchors.length-1][0]) return anchors[anchors.length-1][1];
+
+    for (let i = 0; i < anchors.length - 1; i++) {
+      const [f1, g1] = anchors[i];
+      const [f2, g2] = anchors[i+1];
+      if (freq >= f1 && freq <= f2) {
+        const t = (freq - f1) / (f2 - f1);
+        return Math.round(g1 + (g2 - g1) * t);
+      }
+    }
+    return 0;
+  }
+
+  function applyPreset(name) {
+    const p = PRESETS[name];
+    if (!p) return;
+    state.currentPreset = name;
+    FREQS.forEach(function(f) {
+      const db = getPresetGain(p.shape, f);
+      updateEQ(f, db);
+    });
+    document.querySelectorAll('.preset').forEach(function(btn) {
+      btn.classList.toggle('active', btn.dataset.preset === name);
+    });
+    showToast('Preset: ' + name.toUpperCase(), 'success');
+  }
+
+  document.querySelectorAll('.preset').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      applyPreset(btn.dataset.preset);
+    });
+  });
+
+  // ================= UNLOCK =================
+  const unlockOverlay = document.getElementById('unlockOverlay');
+  const unlockBtn = document.getElementById('unlockBtn');
+  let unlockedOnce = false;
+
+  function handleUnlock(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (unlockedOnce) return;
+    unlockedOnce = true;
+    unlockOverlay.classList.add('hidden');
+    state.unlocked = true;
+    try { initAudio(); } catch(err) { console.log('Init error:', err); }
+    showToast('✅ Ready! Song load karo', 'success');
+  }
+
+  unlockBtn.addEventListener('click', handleUnlock);
+  unlockBtn.addEventListener('touchend', handleUnlock, {passive:false});
+  unlockBtn.addEventListener('touchstart', handleUnlock, {passive:false});
+
+  // ================= AUDIO INIT =================
+  function initAudio() {
+    if (audioInitialized) {
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(function(){});
+      return;
+    }
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { console.warn('No Web Audio API'); return; }
+      ctx = new AC();
+
+      sourceNode = ctx.createMediaElementSource(audio);
+
+      // Sub-bass filter (45 Hz)
+      subBassFilter = ctx.createBiquadFilter();
+      subBassFilter.type = 'peaking';
+      subBassFilter.frequency.value = 45;
+      subBassFilter.Q.value = 0.7;
+      subBassFilter.gain.value = 0;
+
+      // Punch filter (100 Hz)
+      punchFilter = ctx.createBiquadFilter();
+      punchFilter.type = 'peaking';
+      punchFilter.frequency.value = 100;
+      punchFilter.Q.value = 1.2;
+      punchFilter.gain.value = 0;
+
+      // 32-band EQ filters
+      filters = FREQS.map(function(freq) {
+        const f = ctx.createBiquadFilter();
+        // Lowest/highest use shelf, middle use peaking
+        if (freq <= 33) {
+          f.type = 'lowshelf';
+          f.frequency.value = Math.min(freq, 200);
+        } else if (freq >= 9000) {
+          f.type = 'highshelf';
+          f.frequency.value = Math.max(freq, 8000);
+        } else {
+          f.type = 'peaking';
+          f.frequency.value = freq;
+          f.Q.value = 1.4;
+        }
+        f.gain.value = 0;
+        return f;
+      });
+
+      // COMPRESSOR — dynamic range control
+      compressorNode = ctx.createDynamicsCompressor();
+      compressorNode.threshold.value = -12;   // start compressing at -12dB
+      compressorNode.knee.value = 6;
+      compressorNode.ratio.value = 4;         // 4:1 ratio
+      compressorNode.attack.value = 0.003;    // 3ms fast
+      compressorNode.release.value = 0.25;    // 250ms
+
+      // LIMITER — final peak protection
+      limiterNode = ctx.createDynamicsCompressor();
+      limiterNode.threshold.value = -3;       // hard cap at -3dB
+      limiterNode.knee.value = 0;             // hard knee = limiter
+      limiterNode.ratio.value = 20;           // 20:1 ratio = near limiting
+      limiterNode.attack.value = 0.001;       // 1ms ultra fast
+      limiterNode.release.value = 0.1;        // 100ms
+
+      // Master gain
+      gainNode = ctx.createGain();
+      gainNode.gain.value = state.volume;
+
+      // Chain: source → subBass → punch → 32 EQ → compressor → limiter → gain → destination
+      let chain = sourceNode;
+      chain = chain.connect(subBassFilter);
+      chain = chain.connect(punchFilter);
+      filters.forEach(function(f) {
+        chain = chain.connect(f);
+      });
+      chain = chain.connect(compressorNode);
+      chain = chain.connect(limiterNode);
+      chain.connect(gainNode).connect(ctx.destination);
+
+      audioInitialized = true;
+      console.log('🎵 Audio init: 32 filters + Compressor + Limiter');
+
+      if (ctx.state === 'suspended') ctx.resume().catch(function(){});
+    } catch(err) {
+      console.error('Audio init failed:', err);
+    }
+  }
+
+  // ================= BASS VIBRATION =================
+  function applyBassBoost() {
+    if (!audioInitialized) return;
+    try {
+      // Limiter + compressor protect karega, so we can boost more
+      if (subBassFilter) subBassFilter.gain.value = state.subBass * 18;   // max +18dB
+      if (punchFilter)   punchFilter.gain.value   = state.punch * 15;     // max +15dB
+    } catch(e) {}
+  }
+
+  bassVibeBtn.addEventListener('click', function() {
+    state.bassVibeOn = !state.bassVibeOn;
+    this.classList.toggle('active', state.bassVibeOn);
+    this.textContent = '💥 BASS VIBRATION: ' + (state.bassVibeOn ? 'ON' : 'OFF');
+
+    if (state.bassVibeOn) {
+      state.subBass = 1.0;
+      state.punch = 1.0;
+      setSubBassSlider(1.0);
+      setPunchSlider(1.0);
+      showToast('💥 BASS VIBRATION ON — Limiter protect karega!', 'success');
+    } else {
+      state.subBass = 0;
+      state.punch = 0;
+      setSubBassSlider(0);
+      setPunchSlider(0);
+      showToast('Bass Vibration OFF', 'success');
+    }
+    applyBassBoost();
+  });
+
+  function setSubBassSlider(v) {
+    document.getElementById('subBassFill').style.width = (v * 100) + '%';
+    document.getElementById('subBassThumb').style.left = (v * 100) + '%';
+    document.getElementById('subBassValue').textContent = Math.round(v * 100) + '%';
+  }
+
+  (function() {
+    const slider = document.getElementById('subBassSlider');
+    let dragging = false;
+    function setFromX(clientX) {
+      const rect = slider.getBoundingClientRect();
+      let pct = (clientX - rect.left) / rect.width;
+      pct = Math.max(0, Math.min(1, pct));
+      state.subBass = pct;
+      setSubBassSlider(pct);
+      applyBassBoost();
+    }
+    slider.addEventListener('mousedown', function(e) { e.preventDefault(); dragging = true; setFromX(e.clientX); });
+    slider.addEventListener('touchstart', function(e) { e.preventDefault(); dragging = true; setFromX(e.touches[0].clientX); }, {passive:false});
+    window.addEventListener('mousemove', function(e) { if (dragging) setFromX(e.clientX); });
+    window.addEventListener('touchmove', function(e) {
+      if (dragging) { e.preventDefault(); setFromX(e.touches[0].clientX); }
+    }, {passive:false});
+    window.addEventListener('mouseup', function() { dragging = false; });
+    window.addEventListener('touchend', function() { dragging = false; });
+    setSubBassSlider(0);
+  })();
+
+  function setPunchSlider(v) {
+    document.getElementById('punchFill').style.width = (v * 100) + '%';
+    document.getElementById('punchThumb').style.left = (v * 100) + '%';
+    document.getElementById('punchValue').textContent = Math.round(v * 100) + '%';
+  }
+
+  (function() {
+    const slider = document.getElementById('punchSlider');
+    let dragging = false;
+    function setFromX(clientX) {
+      const rect = slider.getBoundingClientRect();
+      let pct = (clientX - rect.left) / rect.width;
+      pct = Math.max(0, Math.min(1, pct));
+      state.punch = pct;
+      setPunchSlider(pct);
+      applyBassBoost();
+    }
+    slider.addEventListener('mousedown', function(e) { e.preventDefault(); dragging = true; setFromX(e.clientX); });
+    slider.addEventListener('touchstart', function(e) { e.preventDefault(); dragging = true; setFromX(e.touches[0].clientX); }, {passive:false});
+    window.addEventListener('mousemove', function(e) { if (dragging) setFromX(e.clientX); });
+    window.addEventListener('touchmove', function(e) {
+      if (dragging) { e.preventDefault(); setFromX(e.touches[0].clientX); }
+    }, {passive:false});
+    window.addEventListener('mouseup', function() { dragging = false; });
+    window.addEventListener('touchend', function() { dragging = false; });
+    setPunchSlider(0);
+  })();
+
+  // ================= FILE LOAD =================
+  fileInput.addEventListener('change', function(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const fileName = file.name.toLowerCase();
+    const ext = fileName.substring(fileName.lastIndexOf('.'));
+    const validExts = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac', '.oga'];
+    const isAudio = file.type.indexOf('audio/') === 0 || validExts.indexOf(ext) !== -1;
+    if (!isAudio) { showToast('❌ Audio file nahi hai!', 'error'); return; }
+
+    try {
+      initAudio();
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(function(){});
+      const url = URL.createObjectURL(file);
+      audio.src = url;
+      audio.load();
+
+      audio.onloadedmetadata = function() {
+        state.loaded = true;
+        fileLabel.classList.add('loaded');
+        fileLabel.innerHTML = '<span class="icon">✓</span>' + file.name.slice(0, 24);
+        nowPlaying.classList.remove('idle');
+        nowPlaying.textContent = '🎵 ' + file.name;
+        totalTimeEl.textContent = formatTime(audio.duration);
+        showToast('✅ Loaded! PLAY dabao', 'success');
+      };
+      audio.onerror = function() {
+        showToast('❌ Format play nahi ho sakta', 'error');
+        fileLabel.classList.remove('loaded');
+      };
+      audio.ontimeupdate = function() {
+        if (audio.duration && isFinite(audio.duration)) {
+          const pct = (audio.currentTime / audio.duration) * 100;
+          seekFill.style.width = pct + '%';
+          seekThumb.style.left = pct + '%';
+          currentTimeEl.textContent = formatTime(audio.currentTime);
+        }
+      };
+      audio.onended = function() {
+        if (!state.loop) {
+          state.playing = false;
+          playBtn.textContent = '▶';
+          playBtn.classList.remove('active');
+        }
+      };
+    } catch(err) {
+      console.error('Load error:', err);
+      showToast('❌ Load fail', 'error');
+    }
+  });
+
+  // ================= PLAY =================
+  playBtn.addEventListener('click', function() {
+    if (!state.loaded) {
+      showToast('📁 Pehle song load karo', 'error');
+      fileInput.click();
+      return;
+    }
+    initAudio();
+    if (ctx && ctx.state === 'suspended') ctx.resume().catch(function(){});
+    if (state.playing) {
+      audio.pause();
+      state.playing = false;
+      playBtn.textContent = '▶';
+      playBtn.classList.remove('active');
+    } else {
+      const p = audio.play();
+      if (p && p.then) {
+        p.then(function() {
+          state.playing = true;
+          playBtn.textContent = '⏸';
+          playBtn.classList.add('active');
+        }).catch(function() { showToast('⚠️ Play nahi ho raha', 'error'); });
+      }
+    }
+  });
+
+  rewindBtn.addEventListener('click', function() {
+    if (!state.loaded) return;
+    audio.currentTime = Math.max(0, audio.currentTime - 10);
+  });
+  forwardBtn.addEventListener('click', function() {
+    if (!state.loaded) return;
+    audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
+  });
+
+  // ================= SEEK =================
+  (function() {
+    let dragging = false;
+    function setFromX(clientX) {
+      const rect = seek.getBoundingClientRect();
+      let pct = (clientX - rect.left) / rect.width;
+      pct = Math.max(0, Math.min(1, pct));
+      if (audio.duration && isFinite(audio.duration)) {
+        audio.currentTime = pct * audio.duration;
+        seekFill.style.width = (pct * 100) + '%';
+        seekThumb.style.left = (pct * 100) + '%';
+      }
+    }
+    seek.addEventListener('mousedown', function(e) { e.preventDefault(); dragging = true; setFromX(e.clientX); });
+    seek.addEventListener('touchstart', function(e) { e.preventDefault(); dragging = true; setFromX(e.touches[0].clientX); }, {passive:false});
+    window.addEventListener('mousemove', function(e) { if (dragging) setFromX(e.clientX); });
+    window.addEventListener('touchmove', function(e) {
+      if (dragging) { e.preventDefault(); setFromX(e.touches[0].clientX); }
+    }, {passive:false});
+    window.addEventListener('mouseup', function() { dragging = false; });
+    window.addEventListener('touchend', function() { dragging = false; });
+  })();
+
+  // ================= VOLUME =================
+  (function() {
+    let dragging = false;
+    function setFromX(clientX) {
+      const rect = volumeSlider.getBoundingClientRect();
+      let pct = (clientX - rect.left) / rect.width;
+      pct = Math.max(0, Math.min(1, pct));
+      state.volume = pct;
+      volFill.style.width = (pct * 100) + '%';
+      volThumb.style.left = (pct * 100) + '%';
+      volValue.textContent = Math.round(pct * 100) + '%';
+      if (audioInitialized && gainNode) {
+        try { gainNode.gain.value = pct; } catch(e){}
+      }
+    }
+    volumeSlider.addEventListener('mousedown', function(e) { e.preventDefault(); dragging = true; setFromX(e.clientX); });
+    volumeSlider.addEventListener('touchstart', function(e) { e.preventDefault(); dragging = true; setFromX(e.touches[0].clientX); }, {passive:false});
+    window.addEventListener('mousemove', function(e) { if (dragging) setFromX(e.clientX); });
+    window.addEventListener('touchmove', function(e) {
+      if (dragging) { e.preventDefault(); setFromX(e.touches[0].clientX); }
+    }, {passive:false});
+    window.addEventListener('mouseup', function() { dragging = false; });
+    window.addEventListener('touchend', function() { dragging = false; });
+    volFill.style.width = '100%';
+    volThumb.style.left = '100%';
+  })();
+
+  // ================= SPEED =================
+  const SPEEDS = [1.0, 1.25, 1.5, 2.0, 0.75, 0.5];
+  let speedIdx = 0;
+  speedBtn.addEventListener('click', function() {
+    speedIdx = (speedIdx + 1) % SPEEDS.length;
+    state.speed = SPEEDS[speedIdx];
+    audio.playbackRate = state.speed;
+    speedBtn.textContent = '⚡ SPEED ' + state.speed.toFixed(2) + 'x';
+    speedBtn.classList.toggle('active', state.speed !== 1.0);
+  });
+
+  // ================= LOOP =================
+  loopBtn.addEventListener('click', function() {
+    state.loop = !state.loop;
+    audio.loop = state.loop;
+    loopBtn.textContent = '🔁 LOOP ' + (state.loop ? 'ON' : 'OFF');
+    loopBtn.classList.toggle('active', state.loop);
+  });
+
+  // ================= RESET =================
+  resetBtn.addEventListener('click', function() {
+    applyPreset('flat');
+    state.subBass = 0;
+    state.punch = 0;
+    state.bassVibeOn = false;
+    bassVibeBtn.classList.remove('active');
+    bassVibeBtn.textContent = '💥 BASS VIBRATION: OFF';
+    setSubBassSlider(0);
+    setPunchSlider(0);
+    applyBassBoost();
+    showToast('🔄 All reset', 'success');
+  });
+
+  // ================= OUTPUT DEVICE =================
+  (function() {
+    const supportsSetSinkId = 'setSinkId' in HTMLMediaElement.prototype;
+    if (supportsSetSinkId) {
+      deviceBtn.classList.add('supported');
+      deviceBtn.textContent = '🔊 SELECT BLUETOOTH DEVICE';
+      deviceHint.textContent = 'Tap karke soundbar select karo';
+    } else {
+      deviceBtn.classList.add('not-supported');
+      deviceBtn.textContent = '⚠️ NOT SUPPORTED';
+      deviceHint.textContent = 'Chrome Android use karo';
+    }
+    deviceBtn.addEventListener('click', async function() {
+      if (!supportsSetSinkId) { showToast('⚠️ Support nahi', 'error'); return; }
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true }).catch(function(){});
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const outputs = devices.filter(function(d) { return d.kind === 'audiooutput'; });
+        if (outputs.length === 0) { showToast('❌ Koi output nahi', 'error'); return; }
+        let msg = 'Available outputs:\n\n';
+        outputs.forEach(function(d, i) { msg += (i + 1) + '. ' + (d.label || 'Device ' + (i+1)) + '\n'; });
+        msg += '\nNumber type karo:';
+        const choice = prompt(msg, '1');
+        const idx = parseInt(choice) - 1;
+        if (isNaN(idx) || idx < 0 || idx >= outputs.length) return;
+        const selected = outputs[idx];
+        if (audio.setSinkId) {
+          await audio.setSinkId(selected.deviceId);
+          deviceBtn.textContent = '✓ ' + (selected.label || 'Selected');
+          showToast('✅ Output changed', 'success');
+        }
+      } catch(err) {
+        showToast('❌ Device error', 'error');
+      }
+    });
+  })();
+
+  // ================= UTILS =================
+  function formatTime(sec) {
+    if (!sec || !isFinite(sec)) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', function(e) {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) e.preventDefault();
+    lastTouchEnd = now;
+  }, {passive:false});
+
+  // ================= BUILD UI =================
+  buildEQ32UI();
+
+  console.log('%c🎧 Soundbar EQ Pro — 32 Band + Limiter Ready!', 'color:#00e5ff;font-size:14px;font-weight:bold');
+})();
+</script>
+</body>
+</html>
